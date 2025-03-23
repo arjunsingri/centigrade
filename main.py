@@ -157,12 +157,11 @@ def add_product_to_order(order_id: str, request: AddProductsRequest):
     if not order:
         raise HTTPException(status_code=404, detail=f"Order with order-id {order_id} not found")
 
-    pids = list(set(request.product_ids))
-
-    total_price = validate_products(pids) # remove duplicates
-    order.products.extend(pids)
-    order.products = list(set(order.products)) # remove duplicates
-    order.total_price += total_price 
+    pids = list(set(request.product_ids).union(set(order.products)))
+    print(pids)
+    total_price = validate_products(pids) 
+    order.products = pids 
+    order.total_price = total_price 
 
     return order
 
