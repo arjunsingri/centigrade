@@ -2,7 +2,9 @@
 
 Install requirements using the command:
 
-`pip3 install -r requirements.txt`
+```
+pip3 install -r requirements.txt
+```
 
 
 Run the app using the command:
