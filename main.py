@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 from datetime import datetime
 from uuid import uuid4
+from uuid import uuid5
+import uuid
 
 app = FastAPI()
 
@@ -63,12 +65,11 @@ class CustomerCreateRequest(BaseModel):
     phone_number: str
     physical_address: str
 
-
 # Allow creating customer entity
 @app.post("/customers", response_model=Customer)
 def create_customer(request: CustomerCreateRequest):
     # Generate deterministic UUID from email
-    customer_id = str(uuid5(NAMESPACE_DNS, request.email_address))
+    customer_id = str(uuid5(uuid.NAMESPACE_DNS, request.email_address))
 
     if customer_id in customers_db:
         raise HTTPException(status_code=409, detail=f"Customer already exists with this email {request.email_address}")
@@ -83,6 +84,8 @@ def create_customer(request: CustomerCreateRequest):
         creation_date=datetime.utcnow()
     )
 
+    customers_db[customer_id] = customer
+
     return customer
 
 # Allow creating products
@@ -90,7 +93,7 @@ def create_customer(request: CustomerCreateRequest):
 def create_product(product_request: ProductCreateRequest):
 
     combined = f"{product_request.product_name}:{product_request.category}"
-    product_id = uuid.uuid5(uuid.NAMESPACE_DNS, combined)
+    product_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, combined))
 
     if product_id in products_db.keys():
         raise HTTPException(status_code=409, detail=f"Duplicate product exists {product_request.product_name}:{product_request.category}")
@@ -113,21 +116,25 @@ def get_customer(customer_id: str):
         raise HTTPException(status_code=404, detail="Customer not found")
     return customer
 
+def validate_products(product_ids: List[str]) -> float:
+    total_price = 0.0
+
+    # even if one product is not found, we fail the entire request
+    for pid in product_ids:
+        if pid not in products_db.keys():
+            raise HTTPException(status_code=404, detail="Product with product-id {pid} not found")
+
+        total_price += products_db[pid].price
+
+    return total_price
+
 # 2. Create an order
 @app.post("/order", response_model=Order)
 def create_order(request: CreateOrderRequest):
     if request.customer_id not in customers_db:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    total_price = 0.0
-    for pid in request.product_ids:
-        if pid in products_db:
-            total_price += products_db[pid].price
-        else:
-           print(f"Found a non-existant product-id {pid}") 
-
-    if total_price == 0.0:
-        raise HTTPException(status_code=400, detail="None of the products are orderable")
+    total_price = validate_products(request.product_ids) 
 
     order_id = str(uuid4())
     order = Order(
@@ -150,16 +157,11 @@ def add_product_to_order(order_id: str, request: AddProductsRequest):
     if not order:
         raise HTTPException(status_code=404, detail=f"Order with order-id {order_id} not found")
 
-    total_price = 0.0
+    pids = list(set(request.product_ids))
 
-    # even if one product is not found, we fail the entire request
-    for pid in request.product_ids.items():
-        if pid not in products_db.keys():
-            raise HTTPException(status_code=404, detail="Product with product-id {request.product_id} not found")
-
-        total_price += products_db[pid].price
-
-    order.products.extend(request.product_ids)
+    total_price = validate_products(pids) # remove duplicates
+    order.products.extend(pids)
+    order.products = list(set(order.products)) # remove duplicates
     order.total_price += total_price 
 
     return order
