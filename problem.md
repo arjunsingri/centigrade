@@ -1,6 +1,7 @@
 Hi Arjun,
 
 Thanks for taking the time to catch up today! I've shared the homework assignment below! Looking forward to getting your availability and scheduling your chat with the team. Hope you have a great weekend!
+
 Microservice Design Exercise
 Create a simple API and DDL for a fake store and join customers to orders in python.
 

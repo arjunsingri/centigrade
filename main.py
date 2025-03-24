@@ -38,13 +38,6 @@ class Order(BaseModel):
     status: str
     products: List[str] = []
 
-class Product(BaseModel):
-    product_id: str
-    product_name: str
-    description: str
-    price: float
-    category: str
-
 class ProductCreateRequest(BaseModel):
     product_name: str
     description: str
