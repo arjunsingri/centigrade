@@ -10,7 +10,7 @@ pip3 install -r requirements.txt
 Run the app using the command:
 
 ```
-uvicorn main:app --reload
+uvicorn main:app 
 ```
 
 # Create customer
